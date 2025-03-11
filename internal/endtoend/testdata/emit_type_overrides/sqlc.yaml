@@ -13,7 +13,10 @@ sql:
         out: db
         options:
           package: db
+          emit_pydantic_models: true
           emit_sync_querier: true
           emit_async_querier: true
-          emit_str_enum: true
-
+          overrides:
+            - column: "books.payload"
+              py_import: "my_lib.models"
+              py_type: "Payload"
