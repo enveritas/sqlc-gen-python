@@ -282,7 +282,7 @@ func (w *writer) printConstant(c *ast.Constant, indent int32) {
 			str = `"""`
 		}
 		w.print(str)
-		w.print(n.Str)
+		w.print(strings.ReplaceAll(n.Str, `"`, `\"`))
 		w.print(str)
 
 	default:
