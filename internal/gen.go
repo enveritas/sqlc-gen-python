@@ -219,9 +219,9 @@ func methodName(name string) string {
 var pyIdentPattern = regexp.MustCompile("[^a-zA-Z0-9_]+")
 
 func pyEnumValueName(value string) string {
-	id := strings.Replace(value, "-", "_", -1)
-	id = strings.Replace(id, ":", "_", -1)
-	id = strings.Replace(id, "/", "_", -1)
+	id := strings.ReplaceAll(value, "-", "_")
+	id = strings.ReplaceAll(id, ":", "_")
+	id = strings.ReplaceAll(id, "/", "_")
 	id = pyIdentPattern.ReplaceAllString(id, "")
 	return strings.ToUpper(id)
 }
