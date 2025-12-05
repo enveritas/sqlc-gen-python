@@ -20,6 +20,29 @@ sql:
           emit_async_querier: true
 ```
 
+### Configuration Options
+
+These are the supported `options` for the `py` plugin. Add them under the `codegen[].options` section of your `sqlc.yaml`.
+
+- package: Module path used for imports in generated query files (e.g., `from <package> import models`).
+- emit_sync_querier: Emit a synchronous `Querier` class using `sqlalchemy.engine.Connection`.
+- emit_async_querier: Emit an asynchronous `AsyncQuerier` class using `sqlalchemy.ext.asyncio.AsyncConnection`.
+- emit_pydantic_models: Emit Pydantic models instead of `dataclasses` for models.py. See the section below.
+- emit_str_enum: Emit enums as `enum.StrEnum` (Python >=3.11). When false, emit `(str, enum.Enum)`.  See the section below.
+- emit_schema_name_prefix: When true, prefix non-default schema to generated types to avoid name collisions. Examples:
+  - false (default): `Book`, `BookStatus`
+  - true: `MySchemaBook`, `MySchemaBookStatus` when the objects live in schema `my_schema`.
+- emit_exact_table_names: When true, do not singularize table names for model class names.
+- query_parameter_limit: Integer controlling when query params are grouped into a single struct argument.
+  - If the number of parameters exceeds this value, a single `Params` struct is emitted.
+  - Set to 0 to always emit a struct; omit or set to a large value to keep separate parameters.
+- inflection_exclude_table_names: A list of table names to exclude from singularization when `emit_exact_table_names` is false.
+- overrides: Column type overrides; see the section below.
+
+Notes
+- out: Controlled by `codegen[].out` at the sqlc level. The plugin’s `out` option is not used; prefer the top-level `out` value.
+
+
 ### Emit Pydantic Models instead of `dataclasses`
 
 Option: `emit_pydantic_models`
