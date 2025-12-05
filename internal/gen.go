@@ -215,7 +215,7 @@ func makePyType(req *plugin.GenerateRequest, col *plugin.Column) pyType {
 	}
 
 	// No override found, use the standard type mapping
-	typ := pyInnerType(req, col)
+	typ := pyInnerType(conf, req, col)
 	return pyType{
 		InnerType: typ,
 		IsArray:   col.IsArray,
@@ -223,10 +223,10 @@ func makePyType(req *plugin.GenerateRequest, col *plugin.Column) pyType {
 	}
 }
 
-func pyInnerType(req *plugin.GenerateRequest, col *plugin.Column) string {
+func pyInnerType(conf Config, req *plugin.GenerateRequest, col *plugin.Column) string {
 	switch req.Settings.Engine {
 	case "postgresql":
-		return postgresType(req, col)
+		return postgresType(conf, req, col)
 	default:
 		log.Println("unsupported engine type")
 		return "Any"
@@ -260,7 +260,7 @@ func pyEnumValueName(value string) string {
 	return strings.ToUpper(id)
 }
 
-func buildEnums(req *plugin.GenerateRequest) []Enum {
+func buildEnums(conf Config, req *plugin.GenerateRequest) []Enum {
 	var enums []Enum
 	for _, schema := range req.Catalog.Schemas {
 		if schema.Name == "pg_catalog" || schema.Name == "information_schema" {
@@ -268,10 +268,10 @@ func buildEnums(req *plugin.GenerateRequest) []Enum {
 		}
 		for _, enum := range schema.Enums {
 			var enumName string
-			if schema.Name == req.Catalog.DefaultSchema {
-				enumName = enum.Name
-			} else {
+			if conf.EmitSchemaNamePrefix && schema.Name != req.Catalog.DefaultSchema {
 				enumName = schema.Name + "_" + enum.Name
+			} else {
+				enumName = enum.Name
 			}
 			e := Enum{
 				Name:    modelName(enumName, req.Settings),
@@ -301,10 +301,10 @@ func buildModels(conf Config, req *plugin.GenerateRequest) []Struct {
 		}
 		for _, table := range schema.Tables {
 			var tableName string
-			if schema.Name == req.Catalog.DefaultSchema {
-				tableName = table.Rel.Name
-			} else {
+			if conf.EmitSchemaNamePrefix && schema.Name != req.Catalog.DefaultSchema {
 				tableName = schema.Name + "_" + table.Rel.Name
+			} else {
+				tableName = table.Rel.Name
 			}
 			structName := tableName
 			if !conf.EmitExactTableNames {
@@ -1219,7 +1219,7 @@ func Generate(_ context.Context, req *plugin.GenerateRequest) (*plugin.GenerateR
 		}
 	}
 
-	enums := buildEnums(req)
+	enums := buildEnums(conf, req)
 	models := buildModels(conf, req)
 	queries, err := buildQueries(conf, req, models)
 	if err != nil {

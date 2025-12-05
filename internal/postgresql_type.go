@@ -7,7 +7,7 @@ import (
 	"github.com/sqlc-dev/plugin-sdk-go/sdk"
 )
 
-func postgresType(req *plugin.GenerateRequest, col *plugin.Column) string {
+func postgresType(conf Config, req *plugin.GenerateRequest, col *plugin.Column) string {
     columnType := sdk.DataType(col.Type)
 
 	switch columnType {
@@ -50,10 +50,11 @@ func postgresType(req *plugin.GenerateRequest, col *plugin.Column) string {
             for _, enum := range schema.Enums {
                 // Match both unqualified and schema-qualified enum type names
                 if columnType == enum.Name || columnType == schema.Name+"."+enum.Name {
-                    if schema.Name == req.Catalog.DefaultSchema {
-                        return "models." + modelName(enum.Name, req.Settings)
+                    name := enum.Name
+                    if conf.EmitSchemaNamePrefix && schema.Name != req.Catalog.DefaultSchema {
+                        name = schema.Name + "_" + enum.Name
                     }
-                    return "models." + modelName(schema.Name+"_"+enum.Name, req.Settings)
+                    return "models." + modelName(name, req.Settings)
                 }
             }
         }
