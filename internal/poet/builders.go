@@ -64,7 +64,7 @@ func Is() *ast.Node {
 func Name(id string) *ast.Node {
 	return &ast.Node{
 		Node: &ast.Node_Name{
-			Name: &ast.Name{Id: id},
+			Name: &ast.Name{Id: FieldName(id)},
 		},
 	}
 }

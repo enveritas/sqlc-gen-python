@@ -97,20 +97,6 @@ func (i *importer) modelImportSpecs() (map[string]importSpec, map[string]importS
 
 	pkg := make(map[string]importSpec)
 
-	// Add custom imports from overrides
-	for _, override := range i.C.Overrides {
-		if override.PyImport != "" {
-			// Check if it's a standard module or a package import
-			if strings.Contains(override.PyImport, ".") {
-				// It's a package import
-				pkg[override.PyImport] = importSpec{Module: override.PyImport}
-			} else {
-				// It's a standard import
-				std[override.PyImport] = importSpec{Module: override.PyImport}
-			}
-		}
-	}
-
 	return std, pkg
 }
 
@@ -178,20 +164,6 @@ func (i *importer) queryImportSpecs(fileName string) (map[string]importSpec, map
 		queryValueModelImports(q.Ret)
 		for _, qv := range q.Args {
 			queryValueModelImports(qv)
-		}
-	}
-
-	// Add custom imports from overrides for query files
-	for _, override := range i.C.Overrides {
-		if override.PyImport != "" {
-			// Check if it's a standard module or a package import
-			if strings.Contains(override.PyImport, ".") {
-				// It's a package import
-				pkg[override.PyImport] = importSpec{Module: override.PyImport}
-			} else {
-				// It's a standard import
-				std[override.PyImport] = importSpec{Module: override.PyImport}
-			}
 		}
 	}
 

@@ -5,5 +5,6 @@ import dataclasses
 
 
 @dataclasses.dataclass()
-class Bar:
+class Author:
     id: int
+    class_: str

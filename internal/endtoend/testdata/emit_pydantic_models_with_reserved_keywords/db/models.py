@@ -2,7 +2,6 @@
 # versions:
 #   sqlc v1.29.0
 import pydantic
-from typing import Optional
 
 
 class Author(pydantic.BaseModel):
@@ -11,5 +10,6 @@ class Author(pydantic.BaseModel):
         validate_by_name=True,
     )
     id: int
-    name: str
-    bio: Optional[str]
+    class_: str = pydantic.Field(
+        alias="class",
+    )
