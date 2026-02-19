@@ -181,6 +181,40 @@ func (q Query) ArgDictNode() *pyast.Node {
 }
 
 func makePyType(req *plugin.GenerateRequest, col *plugin.Column) pyType {
+	// Parse the configuration
+	var conf Config
+	if len(req.PluginOptions) > 0 {
+		if err := json.Unmarshal(req.PluginOptions, &conf); err != nil {
+			log.Printf("failed to parse plugin options: %s", err)
+		}
+	}
+
+	// Check for overrides
+	if len(conf.Overrides) > 0 && col.Table != nil {
+		tableName := col.Table.Name
+		if col.Table.Schema != "" && col.Table.Schema != req.Catalog.DefaultSchema {
+			tableName = col.Table.Schema + "." + tableName
+		}
+
+		// Look for a matching override
+		for _, override := range conf.Overrides {
+			overrideKey := tableName + "." + col.Name
+			if override.Column == overrideKey {
+				// Found a match, use the override
+				typeStr := override.PyType
+				if override.PyImport != "" && !strings.Contains(typeStr, ".") {
+					typeStr = override.PyImport + "." + override.PyType
+				}
+				return pyType{
+					InnerType: typeStr,
+					IsArray:   col.IsArray,
+					IsNull:    !col.NotNull,
+				}
+			}
+		}
+	}
+	
+	// No override found, use the standard type mapping
 	typ := pyInnerType(req, col)
 	return pyType{
 		InnerType: typ,
