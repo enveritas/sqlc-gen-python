@@ -219,9 +219,9 @@ func methodName(name string) string {
 var pyIdentPattern = regexp.MustCompile("[^a-zA-Z0-9_]+")
 
 func pyEnumValueName(value string) string {
-	id := strings.Replace(value, "-", "_", -1)
-	id = strings.Replace(id, ":", "_", -1)
-	id = strings.Replace(id, "/", "_", -1)
+	id := strings.ReplaceAll(value, "-", "_")
+	id = strings.ReplaceAll(id, ":", "_")
+	id = strings.ReplaceAll(id, "/", "_")
 	id = pyIdentPattern.ReplaceAllString(id, "")
 	return strings.ToUpper(id)
 }
@@ -406,7 +406,7 @@ func buildQueries(conf Config, req *plugin.GenerateRequest, structs []Struct) ([
 			gq.Args = []QueryValue{{
 				Emit:   true,
 				Name:   "arg",
-				Struct: columnsToStruct(req, query.Name+"Params", cols),
+				Struct: columnsToStruct(req, modelName(query.Name+"Params", req.Settings), cols),
 			}}
 		} else {
 			args := make([]QueryValue, 0, len(query.Params))
@@ -461,7 +461,7 @@ func buildQueries(conf Config, req *plugin.GenerateRequest, structs []Struct) ([
 						Column: c,
 					})
 				}
-				gs = columnsToStruct(req, query.Name+"Row", columns)
+				gs = columnsToStruct(req, modelName(query.Name+"Row", req.Settings), columns)
 				emit = true
 			}
 			gq.Ret = QueryValue{
