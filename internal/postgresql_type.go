@@ -7,8 +7,8 @@ import (
 	"github.com/sqlc-dev/plugin-sdk-go/sdk"
 )
 
-func postgresType(req *plugin.GenerateRequest, col *plugin.Column) string {
-	columnType := sdk.DataType(col.Type)
+func postgresType(conf Config, req *plugin.GenerateRequest, col *plugin.Column) string {
+    columnType := sdk.DataType(col.Type)
 
 	switch columnType {
 	case "serial", "serial4", "pg_catalog.serial4", "bigserial", "serial8", "pg_catalog.serial8", "smallserial", "serial2", "pg_catalog.serial2", "integer", "int", "int4", "pg_catalog.int4", "bigint", "int8", "pg_catalog.int8", "smallint", "int2", "pg_catalog.int2":
@@ -42,21 +42,23 @@ func postgresType(req *plugin.GenerateRequest, col *plugin.Column) string {
 		return "str"
 	case "ltree", "lquery", "ltxtquery":
 		return "str"
-	default:
-		for _, schema := range req.Catalog.Schemas {
-			if schema.Name == "pg_catalog" || schema.Name == "information_schema" {
-				continue
-			}
-			for _, enum := range schema.Enums {
-				if columnType == enum.Name {
-					if schema.Name == req.Catalog.DefaultSchema {
-						return "models." + modelName(enum.Name, req.Settings)
-					}
-					return "models." + modelName(schema.Name+"_"+enum.Name, req.Settings)
-				}
-			}
-		}
-		log.Printf("unknown PostgreSQL type: %s\n", columnType)
-		return "Any"
-	}
+    default:
+        for _, schema := range req.Catalog.Schemas {
+            if schema.Name == "pg_catalog" || schema.Name == "information_schema" {
+                continue
+            }
+            for _, enum := range schema.Enums {
+                // Match both unqualified and schema-qualified enum type names
+                if columnType == enum.Name || columnType == schema.Name+"."+enum.Name {
+                    name := enum.Name
+                    if conf.EmitSchemaNamePrefix && schema.Name != req.Catalog.DefaultSchema {
+                        name = schema.Name + "_" + enum.Name
+                    }
+                    return "models." + modelName(name, req.Settings)
+                }
+            }
+        }
+        log.Printf("unknown PostgreSQL type: %s\n", columnType)
+        return "Any"
+    }
 }
