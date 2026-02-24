@@ -190,17 +190,38 @@ func makePyType(req *plugin.GenerateRequest, col *plugin.Column) pyType {
 	}
 
 	// Check for overrides
-	if len(conf.Overrides) > 0 && col.Table != nil {
-		tableName := col.Table.Name
-		if col.Table.Schema != "" && col.Table.Schema != req.Catalog.DefaultSchema {
-			tableName = col.Table.Schema + "." + tableName
+	if len(conf.Overrides) > 0 {
+		if col.Table != nil {
+			tableName := col.Table.Name
+			if col.Table.Schema != "" && col.Table.Schema != req.Catalog.DefaultSchema {
+				tableName = col.Table.Schema + "." + tableName
+			}
+
+			// Look for a matching column override first
+			for _, override := range conf.Overrides {
+				overrideKey := tableName + "." + col.Name
+				if override.Column == overrideKey {
+					// Found a match, use the override
+					typeStr := override.PyType
+					if override.PyImport != "" && !strings.Contains(typeStr, ".") {
+						typeStr = override.PyImport + "." + override.PyType
+					}
+					return pyType{
+						InnerType: typeStr,
+						IsArray:   col.IsArray,
+						IsNull:    !col.NotNull,
+					}
+				}
+			}
 		}
 
-		// Look for a matching override
+		// Then look for a matching db_type override
+		columnType := strings.ToLower(sdk.DataType(col.Type))
 		for _, override := range conf.Overrides {
-			overrideKey := tableName + "." + col.Name
-			if override.Column == overrideKey {
-				// Found a match, use the override
+			if override.DbType == "" {
+				continue
+			}
+			if strings.EqualFold(override.DbType, columnType) {
 				typeStr := override.PyType
 				if override.PyImport != "" && !strings.Contains(typeStr, ".") {
 					typeStr = override.PyImport + "." + override.PyType

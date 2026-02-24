@@ -2,6 +2,7 @@ package python
 
 type OverrideColumn struct {
 	Column   string `json:"column"`
+	DbType   string `json:"db_type"`
 	PyType   string `json:"py_type"`
 	PyImport string `json:"py_import"`
 }
