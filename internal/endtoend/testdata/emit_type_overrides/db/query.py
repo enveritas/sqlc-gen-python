@@ -12,10 +12,10 @@ from db import models
 
 CREATE_BOOK = """-- name: create_book \\:one
 INSERT INTO books (
-          title, status
+          title, status, payload, metadata
 ) VALUES (
-  :p1, :p2
-) RETURNING id, title, status
+  :p1, :p2, :p3, :p4
+) RETURNING id, title, status, payload, metadata
 """
 
 
@@ -26,13 +26,20 @@ WHERE id = :p1
 
 
 GET_BOOK = """-- name: get_book \\:one
-SELECT id, title, status FROM books
+SELECT id, title, status, payload, metadata FROM books
 WHERE id = :p1 LIMIT 1
 """
 
 
 LIST_BOOKS = """-- name: list_books \\:many
-SELECT id, title, status FROM books
+SELECT id, title, status, payload, metadata FROM books
+ORDER BY title
+"""
+
+
+SEARCH_BOOKS = """-- name: search_books \\:many
+SELECT id, title, status, payload, metadata FROM books
+WHERE payload @> COALESCE(:p1\\:\\:jsonb, '{}'\\:\\:jsonb)
 ORDER BY title
 """
 
@@ -41,14 +48,21 @@ class Querier:
     def __init__(self, conn: sqlalchemy.engine.Connection):
         self._conn = conn
 
-    def create_book(self, *, title: str, status: Optional[models.BookStatus]) -> Optional[models.Book]:
-        row = self._conn.execute(sqlalchemy.text(CREATE_BOOK), {"p1": title, "p2": status}).first()
+    def create_book(self, *, title: str, status: Optional[models.BookStatus], payload: my_lib.models.BookPayload, metadata: Optional[my_lib.models.JsonValue]) -> Optional[models.Book]:
+        row = self._conn.execute(sqlalchemy.text(CREATE_BOOK), {
+            "p1": title,
+            "p2": status,
+            "p3": payload,
+            "p4": metadata,
+        }).first()
         if row is None:
             return None
         return models.Book(
             id=row[0],
             title=row[1],
             status=row[2],
+            payload=row[3],
+            metadata=row[4],
         )
 
     def delete_book(self, *, id: int) -> None:
@@ -62,6 +76,8 @@ class Querier:
             id=row[0],
             title=row[1],
             status=row[2],
+            payload=row[3],
+            metadata=row[4],
         )
 
     def list_books(self) -> Iterator[models.Book]:
@@ -71,6 +87,19 @@ class Querier:
                 id=row[0],
                 title=row[1],
                 status=row[2],
+                payload=row[3],
+                metadata=row[4],
+            )
+
+    def search_books(self, *, payload_filter: Optional[my_lib.models.JsonValue]) -> Iterator[models.Book]:
+        result = self._conn.execute(sqlalchemy.text(SEARCH_BOOKS), {"p1": payload_filter})
+        for row in result:
+            yield models.Book(
+                id=row[0],
+                title=row[1],
+                status=row[2],
+                payload=row[3],
+                metadata=row[4],
             )
 
 
@@ -78,14 +107,21 @@ class AsyncQuerier:
     def __init__(self, conn: sqlalchemy.ext.asyncio.AsyncConnection):
         self._conn = conn
 
-    async def create_book(self, *, title: str, status: Optional[models.BookStatus]) -> Optional[models.Book]:
-        row = (await self._conn.execute(sqlalchemy.text(CREATE_BOOK), {"p1": title, "p2": status})).first()
+    async def create_book(self, *, title: str, status: Optional[models.BookStatus], payload: my_lib.models.BookPayload, metadata: Optional[my_lib.models.JsonValue]) -> Optional[models.Book]:
+        row = (await self._conn.execute(sqlalchemy.text(CREATE_BOOK), {
+            "p1": title,
+            "p2": status,
+            "p3": payload,
+            "p4": metadata,
+        })).first()
         if row is None:
             return None
         return models.Book(
             id=row[0],
             title=row[1],
             status=row[2],
+            payload=row[3],
+            metadata=row[4],
         )
 
     async def delete_book(self, *, id: int) -> None:
@@ -99,6 +135,8 @@ class AsyncQuerier:
             id=row[0],
             title=row[1],
             status=row[2],
+            payload=row[3],
+            metadata=row[4],
         )
 
     async def list_books(self) -> AsyncIterator[models.Book]:
@@ -108,4 +146,17 @@ class AsyncQuerier:
                 id=row[0],
                 title=row[1],
                 status=row[2],
+                payload=row[3],
+                metadata=row[4],
+            )
+
+    async def search_books(self, *, payload_filter: Optional[my_lib.models.JsonValue]) -> AsyncIterator[models.Book]:
+        result = await self._conn.stream(sqlalchemy.text(SEARCH_BOOKS), {"p1": payload_filter})
+        async for row in result:
+            yield models.Book(
+                id=row[0],
+                title=row[1],
+                status=row[2],
+                payload=row[3],
+                metadata=row[4],
             )

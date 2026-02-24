@@ -1,7 +1,15 @@
 package python
 
+import (
+	"bytes"
+	json "encoding/json"
+	"fmt"
+	"strings"
+)
+
 type OverrideColumn struct {
 	Column   string `json:"column"`
+	DbType   string `json:"db_type"`
 	PyType   string `json:"py_type"`
 	PyImport string `json:"py_import"`
 }
@@ -18,4 +26,20 @@ type Config struct {
 	QueryParameterLimit         *int32           `json:"query_parameter_limit"`
 	InflectionExcludeTableNames []string         `json:"inflection_exclude_table_names"`
 	Overrides                   []OverrideColumn `json:"overrides"`
+}
+
+func parseConfig(raw []byte) (Config, error) {
+	var conf Config
+	if len(raw) == 0 {
+		return conf, nil
+	}
+
+	dec := json.NewDecoder(bytes.NewReader(raw))
+	dec.DisallowUnknownFields()
+	if err := dec.Decode(&conf); err != nil {
+		msg := strings.TrimPrefix(err.Error(), "json: ")
+		return Config{}, fmt.Errorf("invalid plugin options: %s", msg)
+	}
+
+	return conf, nil
 }
