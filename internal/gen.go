@@ -2,7 +2,6 @@ package python
 
 import (
 	"context"
-	json "encoding/json"
 	"errors"
 	"fmt"
 	"log"
@@ -181,11 +180,13 @@ func (q Query) ArgDictNode() *pyast.Node {
 }
 
 func makePyType(req *plugin.GenerateRequest, col *plugin.Column) pyType {
-	// Parse the configuration
 	var conf Config
 	if len(req.PluginOptions) > 0 {
-		if err := json.Unmarshal(req.PluginOptions, &conf); err != nil {
+		parsed, err := parseConfig(req.PluginOptions)
+		if err != nil {
 			log.Printf("failed to parse plugin options: %s", err)
+		} else {
+			conf = parsed
 		}
 	}
 
@@ -1233,11 +1234,9 @@ func HashComment(s string) string {
 }
 
 func Generate(_ context.Context, req *plugin.GenerateRequest) (*plugin.GenerateResponse, error) {
-	var conf Config
-	if len(req.PluginOptions) > 0 {
-		if err := json.Unmarshal(req.PluginOptions, &conf); err != nil {
-			return nil, err
-		}
+	conf, err := parseConfig(req.PluginOptions)
+	if err != nil {
+		return nil, err
 	}
 
 	enums := buildEnums(conf, req)

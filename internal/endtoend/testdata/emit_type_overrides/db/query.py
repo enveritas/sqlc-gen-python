@@ -37,6 +37,13 @@ ORDER BY title
 """
 
 
+SEARCH_BOOKS = """-- name: search_books \\:many
+SELECT id, title, status, payload, metadata FROM books
+WHERE payload @> COALESCE(:p1\\:\\:jsonb, '{}'\\:\\:jsonb)
+ORDER BY title
+"""
+
+
 class Querier:
     def __init__(self, conn: sqlalchemy.engine.Connection):
         self._conn = conn
@@ -75,6 +82,17 @@ class Querier:
 
     def list_books(self) -> Iterator[models.Book]:
         result = self._conn.execute(sqlalchemy.text(LIST_BOOKS))
+        for row in result:
+            yield models.Book(
+                id=row[0],
+                title=row[1],
+                status=row[2],
+                payload=row[3],
+                metadata=row[4],
+            )
+
+    def search_books(self, *, payload_filter: Optional[my_lib.models.JsonValue]) -> Iterator[models.Book]:
+        result = self._conn.execute(sqlalchemy.text(SEARCH_BOOKS), {"p1": payload_filter})
         for row in result:
             yield models.Book(
                 id=row[0],
@@ -123,6 +141,17 @@ class AsyncQuerier:
 
     async def list_books(self) -> AsyncIterator[models.Book]:
         result = await self._conn.stream(sqlalchemy.text(LIST_BOOKS))
+        async for row in result:
+            yield models.Book(
+                id=row[0],
+                title=row[1],
+                status=row[2],
+                payload=row[3],
+                metadata=row[4],
+            )
+
+    async def search_books(self, *, payload_filter: Optional[my_lib.models.JsonValue]) -> AsyncIterator[models.Book]:
+        result = await self._conn.stream(sqlalchemy.text(SEARCH_BOOKS), {"p1": payload_filter})
         async for row in result:
             yield models.Book(
                 id=row[0],

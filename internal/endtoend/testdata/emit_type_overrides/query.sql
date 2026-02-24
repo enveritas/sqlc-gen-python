@@ -16,3 +16,8 @@ INSERT INTO books (
 -- name: DeleteBook :exec
 DELETE FROM books
 WHERE id = $1;
+
+-- name: SearchBooks :many
+SELECT * FROM books
+WHERE payload @> COALESCE(sqlc.narg('payload_filter')::jsonb, '{}'::jsonb)
+ORDER BY title;
